@@ -94,6 +94,7 @@ public class Model extends Observable {
         setChanged();
     }
 
+
     /** Tilt the board toward SIDE. Return true iff this changes the board.
      *
      * 1. If two Tile objects are adjacent in the direction of motion and have
@@ -114,6 +115,9 @@ public class Model extends Observable {
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
 
+        board.setViewingPerspective(side);
+
+        board.setViewingPerspective(Side.NORTH);
         checkGameOver();
         if (changed) {
             setChanged();
@@ -137,7 +141,13 @@ public class Model extends Observable {
      *  Empty spaces are stored as null.
      * */
     public static boolean emptySpaceExists(Board b) {
-        // TODO: Fill in this function.
+        for (int i = 0; i < b.size(); i++) {
+            for (int j = 0; j < b.size(); j++) {
+                if (b.tile(i, j) == null) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -147,7 +157,13 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.
+        for (int i = 0; i < b.size(); i++) {
+            for (int j = 0; j < b.size(); j++) {
+                if (b.tile(i, j) != null && b.tile(i, j).value() == MAX_PIECE) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -158,8 +174,37 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
-        return false;
+        int[][] d = new int[][]{
+                {0, 1}, {1, 0}
+        };
+
+        if (emptySpaceExists(b)) {
+            return true;
+        } else {
+            for (int i = 0; i < b.size(); i++) {
+                for (int j = 0; j < b.size(); j++) {
+                    Tile currTile = b.tile(i, j);
+                    for (int k = 0; k < 2; k++) {
+                        int nextRow = i + d[k][0];
+                        int nextCol = j + d[k][1];
+                        if (nextRow < b.size()) {
+                            Tile downTile = b.tile(nextRow, j);
+                            if (downTile.value() == currTile.value()) {
+                                return true;
+                            }
+                        }
+
+                        if (nextCol < b.size()) {
+                            Tile rightTile = b.tile(i, nextCol);
+                            if (rightTile.value() == currTile.value()) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
     }
 
 
