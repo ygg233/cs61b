@@ -107,6 +107,7 @@ public class Model extends Observable {
                 if (prev != -1 && tile.value() != prev) {
                     board.move(col, emptyRow, tile);
                     emptyRow--;
+                    canBeMergedRow--;
                     prev = tile.value();
                     changed = true;
                 } else {
