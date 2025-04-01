@@ -14,9 +14,8 @@ import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Formatter;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 
 /** Assorted utilities.
@@ -235,5 +234,17 @@ class Utils {
     static void message(String msg, Object... args) {
         System.out.printf(msg, args);
         System.out.println();
+    }
+
+    /**
+     * I just found that it does not matter which kind of format of the date you choose.
+     * @param date
+     * @return
+     */
+    @Deprecated
+    static String convertDateInFormat(Date date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss z, EEE, d MMM yyyy", Locale.ENGLISH);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return dateFormat.format(date);
     }
 }
