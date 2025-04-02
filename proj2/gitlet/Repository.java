@@ -4,6 +4,8 @@ import jdk.jshell.execution.Util;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -190,5 +192,56 @@ public class Repository implements Serializable {
         }
 
         saveStagingArea(stagingArea);
+    }
+
+    public static void log() {
+        Commit currentCommit = getCurrentCommit();
+
+        while (currentCommit != null) {
+            printCommitInfo(currentCommit);
+            String parentId = currentCommit.getDefaultParentCommit();
+            currentCommit = parentId == null ? null : readCommit(parentId);
+        }
+    }
+
+    public static void globalLog() {
+        List<String> commitSha1Ids = plainFilenamesIn(COMMIT_DIR);
+        for (String sha1Id: commitSha1Ids) {
+            Commit commit = readCommit(sha1Id);
+            printCommitInfo(commit);
+        }
+    }
+
+    public static void find(String msg) {
+        List<String> commitSha1Ids = plainFilenamesIn(COMMIT_DIR);
+        int matchedCommitCount = 0;
+        for (String sha1Id: commitSha1Ids) {
+            Commit commit = readCommit(sha1Id);
+            if (commit.getMessage().equals(msg)) {
+                System.out.println(commit.getSha1Ref());
+                matchedCommitCount++;
+            }
+        }
+        if (matchedCommitCount == 0) {
+            message("Found no commit with that message.");
+            System.exit(0);
+        }
+    }
+
+    public static Commit readCommit(String sha1Id) {
+        File commitFile = join(COMMIT_DIR, sha1Id);
+        return readObject(commitFile, Commit.class);
+    }
+
+    public static void printCommitInfo(Commit commit) {
+        String sha1Id = commit.getSha1Ref();
+        Date date = commit.getTimestamp();
+        String commitMsg = commit.getMessage();
+
+        System.out.println("===");
+        System.out.println("commit " + sha1Id);
+        System.out.println("Date: " + convertDateInFormat(date));
+        System.out.println(commitMsg);
+        System.out.println();
     }
 }

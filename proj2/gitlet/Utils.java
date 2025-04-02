@@ -237,14 +237,13 @@ class Utils {
     }
 
     /**
-     * I just found that it does not matter which kind of format of the date you choose.
+     * Return the date in required format.
      * @param date
      * @return
      */
-    @Deprecated
     static String convertDateInFormat(Date date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss z, EEE, d MMM yyyy", Locale.ENGLISH);
-        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM d HH:mm:ss yyyy Z", Locale.ENGLISH);
+        dateFormat.setTimeZone(TimeZone.getDefault());
         return dateFormat.format(date);
     }
 }

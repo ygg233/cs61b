@@ -29,7 +29,7 @@ public class Commit implements Serializable {
     private String message;
 
     /** The timestamp of this Commit. */
-    private String timestamp;
+    private Date timestamp;
 
     /** The mapping of file name to blob reference
      * NOTICE: At beginning, I thought it can be added with multiple files but not! Read spec carefully!.
@@ -50,13 +50,13 @@ public class Commit implements Serializable {
 
     public Commit() {
         this.message = "initial commit";
-        this.timestamp = new Date(0).toString();
-        this.sha1Ref = Utils.sha1(this.message, this.timestamp);
+        this.timestamp = new Date(0);
+        this.sha1Ref = Utils.sha1(this.message, this.timestamp.toString());
     }
 
     public Commit(String message, Commit parent, StagingArea stagingArea) {
         this.message = message;
-        this.timestamp = new Date().toString();
+        this.timestamp = new Date();
         this.defaultParentCommit = parent.getSha1Ref();
 
         this.filesRef.putAll(parent.getFilesRef());
@@ -69,7 +69,7 @@ public class Commit implements Serializable {
 
         this.sha1Ref = Utils.sha1(
                 this.message,
-                this.timestamp,
+                this.timestamp.toString(),
                 this.filesRef.toString(),
                 this.defaultParentCommit
         );
@@ -81,6 +81,18 @@ public class Commit implements Serializable {
 
     public String getSha1Ref() {
         return sha1Ref;
+    }
+
+    public String getDefaultParentCommit() {
+        return defaultParentCommit;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
+    }
+
+    public String getMessage() {
+        return message;
     }
 
     public void save() {

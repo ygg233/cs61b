@@ -36,6 +36,16 @@ public class Main {
                 String fileToRemove = args[1];
                 Repository.remove(fileToRemove);
                 break;
+            case "log":
+                Repository.log();
+                break;
+            case "global-log":
+                Repository.globalLog();
+                break;
+            case "find":
+                String msgToFind = args[1];
+                Repository.find(msgToFind);
+                break;
             default:
                 Utils.message("No command with that name exists.");
                 System.exit(0);
