@@ -1,5 +1,7 @@
 package gitlet;
 
+import java.io.File;
+
 /** Driver class for Gitlet, a subset of the Git version-control system.
  *  @author TODO
  */
@@ -22,9 +24,14 @@ public class Main {
                 Repository.init();
                 break;
             case "add":
-                // TODO: handle the `add [filename]` command
+                String fileToAdd = args[1];
+                Repository.add(fileToAdd);
                 break;
             // TODO: FILL THE REST IN
+            case "commit":
+                String commitMessage = args[1];
+                Repository.commit(commitMessage);
+                break;
             default:
                 Utils.message("No command with that name exists.");
                 System.exit(0);
