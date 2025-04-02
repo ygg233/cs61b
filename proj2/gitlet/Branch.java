@@ -13,13 +13,24 @@ public class Branch implements Serializable {
         this.commit = commit;
     }
 
-    public void saveBranch() {
-        File branch = Utils.join(Repository.BRANCH_DIR, branchName);
-        Utils.writeObject(branch, this);
-        try {
-            branch.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void save() {
+        File branchFile = Utils.join(Repository.BRANCH_DIR, branchName);
+        Utils.writeObject(branchFile, this);
+
+        if (!branchFile.exists()) {
+            try {
+                branchFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+    }
+
+    public void updateCommit(Commit newCommit) {
+        this.commit = newCommit;
+    }
+
+    public Commit getCommit() {
+        return commit;
     }
 }

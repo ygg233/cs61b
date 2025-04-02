@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Date; // TODO: You'll likely use this in this class
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,7 +35,7 @@ public class Commit implements Serializable {
      * NOTICE: At beginning, I thought it can be added with multiple files but not! Read spec carefully!.
      * NOTICE2: OH NO! Surely that only one file can be 'add' one time, but not commit!
      * */
-    private Map<String, String> filesRef;
+    private Map<String, String> filesRef = new HashMap<>();
 
     /** The reference to the default parent commit. */
     private String defaultParentCommit;
@@ -53,11 +54,36 @@ public class Commit implements Serializable {
         this.sha1Ref = Utils.sha1(this.message, this.timestamp);
     }
 
-    public Commit(String message, String timestamp) {
-        
+    public Commit(String message, Commit parent, StagingArea stagingArea) {
+        this.message = message;
+        this.timestamp = new Date().toString();
+        this.defaultParentCommit = parent.getSha1Ref();
+
+        this.filesRef.putAll(parent.getFilesRef());
+
+        this.filesRef.putAll(stagingArea.getAddedFiles());
+
+        for (String file: stagingArea.getRemovedFiles()) {
+            this.filesRef.remove(file);
+        }
+
+        this.sha1Ref = Utils.sha1(
+                this.message,
+                this.timestamp,
+                this.filesRef.toString(),
+                this.defaultParentCommit
+        );
     }
 
-    public void saveCommit() {
+    public Map<String, String> getFilesRef() {
+        return filesRef;
+    }
+
+    public String getSha1Ref() {
+        return sha1Ref;
+    }
+
+    public void save() {
         File commitFile = Utils.join(Repository.COMMIT_DIR, this.sha1Ref);
         Utils.writeObject(commitFile, this);
         try {
