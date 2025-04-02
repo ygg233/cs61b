@@ -32,6 +32,10 @@ public class Main {
                 String commitMessage = args[1];
                 Repository.commit(commitMessage);
                 break;
+            case "rm":
+                String fileToRemove = args[1];
+                Repository.remove(fileToRemove);
+                break;
             default:
                 Utils.message("No command with that name exists.");
                 System.exit(0);

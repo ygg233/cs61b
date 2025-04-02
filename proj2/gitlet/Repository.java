@@ -5,6 +5,7 @@ import jdk.jshell.execution.Util;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Set;
 
 import static gitlet.Utils.*;
 
@@ -108,7 +109,8 @@ public class Repository implements Serializable {
         Map<String, String> trackedFiles = currentCommit.getFilesRef();
 
         StagingArea stagingArea = getStagingArea();
-        Map<String, String> addedFiles = stagingArea.getAddedFiles();
+        Map<String, String> addedStagingFiles = stagingArea.getAddedFiles();
+        Set<String> removedStagingFiles = stagingArea.getRemovedFiles();
 
         Blob blob = new Blob(fileToAdd);
         String blobSha1Ref = blob.getSha1Ref();
@@ -116,12 +118,15 @@ public class Repository implements Serializable {
         if (trackedFiles != null &&
                 trackedFiles.containsKey(fileName) &&
                 trackedFiles.get(fileName).equals(blobSha1Ref)) {
-            if (addedFiles != null) {
-                addedFiles.remove(fileName);
+            if (addedStagingFiles.containsKey(fileName)) {
+                addedStagingFiles.remove(fileName);
             }
 
+            if (removedStagingFiles.contains(fileName)){
+                removedStagingFiles.remove(fileName);
+            }
         } else {
-            addedFiles.put(fileName, blobSha1Ref);
+            addedStagingFiles.put(fileName, blobSha1Ref);
             blob.save();
         }
 
@@ -154,6 +159,36 @@ public class Repository implements Serializable {
 
         // clear the staging area
         stagingArea.clear();
+        saveStagingArea(stagingArea);
+    }
+
+    public static void remove(String fileName) {
+        // git rm --cached
+        StagingArea stagingArea = getStagingArea();
+        Map<String, String> stagingAddedFiles = stagingArea.getAddedFiles();
+        Set<String> removedStagingFiles = stagingArea.getRemovedFiles();
+
+        Commit currentCommit = getCurrentCommit();
+        Map<String, String> trackedFiles = currentCommit.getFilesRef();
+
+        boolean isStaged = stagingAddedFiles.containsKey(fileName);
+        boolean isTracked = trackedFiles.containsKey(fileName);
+
+        if (!isStaged && !isTracked) {
+            Utils.message("No reason to remove the file.");
+            System.exit(0);
+        }
+
+        if (isStaged) {
+            stagingAddedFiles.remove(fileName);
+        }
+
+        if (isTracked) {
+            removedStagingFiles.add((fileName));
+            File fileToRemove = join(CWD, fileName);
+            fileToRemove.delete();
+        }
+
         saveStagingArea(stagingArea);
     }
 }
