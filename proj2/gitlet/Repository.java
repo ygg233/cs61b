@@ -286,9 +286,9 @@ public class Repository implements Serializable {
         for (String trackedFile: trackedFiles.keySet()) {
             File workingDirectorFile = join(CWD, trackedFile);
             if (workingDirectorFile.exists()) {
-                String workingBlobSha1Id = sha1(readContents(workingDirectorFile));
-                String trackedBlobSha1Id = trackedFiles.get(trackedFile);
-                if (!workingBlobSha1Id.equals(trackedBlobSha1Id) && !stagedAddedFiles.containsKey(trackedFile)) {
+                String workingBlobId = sha1(readContents(workingDirectorFile));
+                String trackedBlobId = trackedFiles.get(trackedFile);
+                if (!workingBlobId.equals(trackedBlobId) && !stagedAddedFiles.containsKey(trackedFile)) {
                     modifiedNotStaged.add(trackedFile + " (modified)");
                 }
             } else {
@@ -342,9 +342,9 @@ public class Repository implements Serializable {
             }
         }
 
-        Commit commit = readCommit(commitSha1Id);
+        Commit targetCommit = readCommit(commitSha1Id);
 
-        if (!commit.getFilesRef().containsKey(fileName)) {
+        if (!targetCommit.getFilesRef().containsKey(fileName)) {
             message("File does not exist in that commit.");
             System.exit(0);
         }
@@ -357,7 +357,7 @@ public class Repository implements Serializable {
         stagingRemovedFiles.remove(fileName);
         saveStagingArea(stagingArea);
 
-        restoreFile(fileName, commit.getFilesRef().get(fileName));
+        restoreFile(fileName, targetCommit.getFilesRef().get(fileName));
     }
 
     public static void restoreFile(String fileName, String blobId) {

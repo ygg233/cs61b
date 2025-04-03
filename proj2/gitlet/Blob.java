@@ -15,7 +15,7 @@ public class Blob {
     public void save() {
         File blobFile = Utils.join(Repository.BLOB_DIR, sha1Ref);
         if (!blobFile.exists()) {
-            Utils.writeObject(blobFile, content);
+            Utils.writeContents(blobFile, content);
         }
     }
 
