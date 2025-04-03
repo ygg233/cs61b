@@ -46,6 +46,9 @@ public class Main {
                 String msgToFind = args[1];
                 Repository.find(msgToFind);
                 break;
+            case "status":
+                Repository.status();
+                break;
             default:
                 Utils.message("No command with that name exists.");
                 System.exit(0);

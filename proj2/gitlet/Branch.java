@@ -33,4 +33,8 @@ public class Branch implements Serializable {
     public Commit getCommit() {
         return commit;
     }
+
+    public String getBranchName() {
+        return branchName;
+    }
 }

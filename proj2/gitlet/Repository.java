@@ -4,10 +4,7 @@ import jdk.jshell.execution.Util;
 
 import java.io.File;
 import java.io.Serializable;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static gitlet.Utils.*;
 
@@ -91,8 +88,7 @@ public class Repository implements Serializable {
     public static Branch getCurrentBranch() {
         String currentBranchName = readContentsAsString(HEAD);
         File branchFile = join(BRANCH_DIR, currentBranchName);
-        Branch currentBranch = readObject(branchFile, Branch.class);
-        return currentBranch;
+        return readObject(branchFile, Branch.class);
     }
 
     public static Commit getCurrentCommit() {
@@ -242,6 +238,92 @@ public class Repository implements Serializable {
         System.out.println("commit " + sha1Id);
         System.out.println("Date: " + convertDateInFormat(date));
         System.out.println(commitMsg);
+        System.out.println();
+    }
+
+    public static void status() {
+        System.out.println("=== Branches ===");
+        String currentBranch = getCurrentBranch().getBranchName();
+        List<String> branches = plainFilenamesIn(BRANCH_DIR);
+        Collections.sort(branches);
+        for (String branch: branches) {
+            if (currentBranch.equals(branch)) {
+                System.out.print('*');
+            }
+            System.out.println(branch);
+        }
+        System.out.println();
+
+        StagingArea stagingArea = getStagingArea();
+        Map<String, String> stagedAddedFiles = stagingArea.getAddedFiles();
+        System.out.println("=== Staged Files ===");
+        List<String> stagedAddedList = new ArrayList<>(stagedAddedFiles.keySet());
+        Collections.sort(stagedAddedList);
+        for (String addedFile: stagedAddedList) {
+            System.out.println(addedFile);
+        }
+        System.out.println();
+
+        System.out.println("=== Removed Files ===");
+        Set<String> stagedRemovedFiles = stagingArea.getRemovedFiles();
+        List<String> stagedRemovedList = new ArrayList<>(stagedRemovedFiles);
+        Collections.sort(stagedRemovedList);
+        for (String removedFile: stagedRemovedList) {
+            System.out.println(removedFile);
+        }
+        System.out.println();
+
+        System.out.println("=== Modifications Not Staged For Commit ===");
+        Commit currentCommit = getCurrentCommit();
+        Set<String> modifiedNotStaged = new TreeSet<>();
+        Map<String, String> trackedFiles = currentCommit.getFilesRef();
+
+        // tracked files are modified or deleted and have not been staged yet
+        for (String trackedFile: trackedFiles.keySet()) {
+            File workingDirectorFile = join(CWD, trackedFile);
+            if (workingDirectorFile.exists()) {
+                String workingBlobSha1Id = sha1(readContents(workingDirectorFile));
+                String trackedBlobSha1Id = trackedFiles.get(trackedFile);
+                if (!workingBlobSha1Id.equals(trackedBlobSha1Id) && !stagedAddedFiles.containsKey(trackedFile)) {
+                    modifiedNotStaged.add(trackedFile + " (modified)");
+                }
+            } else {
+                if (!stagedRemovedFiles.contains(trackedFile)) {
+                    modifiedNotStaged.add(trackedFile + " (deleted)");
+                }
+            }
+        }
+
+        // staged files are modified or deleted
+        for (String stagedAddedFile: stagedAddedFiles.keySet()) {
+            File workingDirectorFile = join(CWD, stagedAddedFile);
+            if (workingDirectorFile.exists()) {
+                String workingBlobSha1Id = sha1(readContents(workingDirectorFile));
+                String stagedAddedBlobSha1Id = stagedAddedFiles.get(stagedAddedFile);
+                if (!workingBlobSha1Id.equals(stagedAddedBlobSha1Id)) {
+                    modifiedNotStaged.add(stagedAddedFile + " (modified)");
+                }
+            } else {
+                modifiedNotStaged.add(stagedAddedFile + " (deleted)");
+            }
+        }
+
+        modifiedNotStaged.forEach(System.out::println);
+        System.out.println();
+
+        System.out.println("=== Untracked Files ===");
+        List<String> workingFiles = plainFilenamesIn(CWD);
+        Set<String> untracked = new TreeSet<>();
+        for (String workingFile: workingFiles) {
+            File file = join(CWD, workingFile);
+            if (file.isDirectory()) {
+                continue;
+            }
+            if (!trackedFiles.containsKey(workingFile) && !stagedAddedFiles.containsKey(workingFile) && !stagedRemovedFiles.contains(workingFile)) {
+                untracked.add(workingFile);
+            }
+        }
+        untracked.forEach(System.out::println);
         System.out.println();
     }
 }
