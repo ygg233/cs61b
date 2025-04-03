@@ -87,7 +87,11 @@ public class Repository implements Serializable {
 
     public static Branch getCurrentBranch() {
         String currentBranchName = readContentsAsString(HEAD);
-        File branchFile = join(BRANCH_DIR, currentBranchName);
+        return readBranch(currentBranchName);
+    }
+
+    public static Branch readBranch(String branchName) {
+        File branchFile = join(BRANCH_DIR, branchName);
         return readObject(branchFile, Branch.class);
     }
 
@@ -325,5 +329,140 @@ public class Repository implements Serializable {
         }
         untracked.forEach(System.out::println);
         System.out.println();
+    }
+
+    public static void checkoutFile(String commitSha1Id, String fileName) {
+        if (commitSha1Id == null) {
+            commitSha1Id = getCurrentCommit().getSha1Ref();
+        } else {
+            commitSha1Id = findFullCommitIdByPrefix(commitSha1Id);
+            if (commitSha1Id == null) {
+                message("No commit with that id exists.");
+                System.exit(0);
+            }
+        }
+
+        Commit commit = readCommit(commitSha1Id);
+
+        if (!commit.getFilesRef().containsKey(fileName)) {
+            message("File does not exist in that commit.");
+            System.exit(0);
+        }
+
+        StagingArea stagingArea = getStagingArea();
+        Map<String, String> stagingAddedFiles = stagingArea.getAddedFiles();
+        Set<String> stagingRemovedFiles = stagingArea.getRemovedFiles();
+
+        stagingAddedFiles.remove(fileName);
+        stagingRemovedFiles.remove(fileName);
+        saveStagingArea(stagingArea);
+
+        restoreFile(fileName, commit.getFilesRef().get(fileName));
+    }
+
+    public static void restoreFile(String fileName, String blobId) {
+        File blobFile = join(BLOB_DIR, blobId);
+        File targetFile = join(CWD, fileName);
+        writeContents(targetFile, readContents(blobFile));
+    }
+
+    public static String findFullCommitIdByPrefix(String commitIdIdPrefix) {
+        List<String> commits = plainFilenamesIn(COMMIT_DIR);
+        List<String> matches = new ArrayList<>();
+        for (String commit: commits) {
+            if (commit.startsWith(commitIdIdPrefix)) {
+                matches.add(commit);
+            }
+            if (matches.size() > 1) {
+                message("Ambiguous commit ID prefix.");
+                System.exit(0);
+            }
+        }
+        return matches.isEmpty() ? null : matches.get(0);
+    }
+
+    public static void checkoutBranch(String targetBranchName) {
+        List<String> branches = plainFilenamesIn(BRANCH_DIR);
+        if (!branches.contains(targetBranchName)) {
+            message("No such branch exists.");
+            System.exit(0);
+        }
+
+        Branch currentBranch = getCurrentBranch();
+        if (currentBranch.getBranchName().equals(targetBranchName)) {
+            message("No need to checkout the current branch.");
+            System.exit(0);
+        }
+
+        Branch targetBranch = readBranch(targetBranchName);
+        Commit targetCommit = targetBranch.getCommit();
+
+        checkUntrackedFilesOverwrite(targetCommit);
+
+        // update HEAD
+        writeContents(HEAD, targetBranchName);
+
+        // clear staging area
+        StagingArea stagingArea = getStagingArea();
+        stagingArea.clear();
+        saveStagingArea(stagingArea);
+
+        overwriteWorkingDirectory(targetCommit);
+        deleteUntrackedInTarget(targetCommit);
+    }
+
+    public static void checkUntrackedFilesOverwrite(Commit targetCommit) {
+        List<String> cwdFiles = plainFilenamesIn(CWD);
+        Map<String, String> targetTracked = targetCommit.getFilesRef();
+        Map<String, String> currentTracked = getCurrentCommit().getFilesRef();
+
+        for (String file: cwdFiles) {
+            if (join(CWD, file).isDirectory()) {
+                continue;
+            }
+
+            boolean isTrackedInCurrentCommit = currentTracked.containsKey(file);
+            boolean isStaged = getStagingArea().getAddedFiles().containsKey(file);
+            boolean isTrackedInTargetCommit = targetTracked.containsKey(file);
+
+            if (isTrackedInTargetCommit && !isStaged && !isTrackedInCurrentCommit) {
+                message("There is an untracked file in the way; delete it, or add and commit it first.");
+                System.exit(0);
+            }
+        }
+    }
+
+    public static void overwriteWorkingDirectory(Commit targetCommit) {
+        Map<String, String> targetTracked = targetCommit.getFilesRef();
+        for (Map.Entry<String, String> entry: targetTracked.entrySet()) {
+            String fileName = entry.getKey();
+            String blobId = entry.getValue();
+            restoreFile(fileName, blobId);
+        }
+    }
+
+    public static void deleteUntrackedInTarget(Commit targetCommit) {
+        Commit currentCommit = getCurrentCommit();
+        Set<String> currentTracked = currentCommit.getFilesRef().keySet();
+        Map<String, String> targetTracked = targetCommit.getFilesRef();
+
+        for (String fileName: currentTracked) {
+            if (!targetTracked.containsKey(fileName)) {
+                File fileToDelete = join(CWD, fileName);
+                if (fileToDelete.exists()) { // file could be staged to be removed
+                    fileToDelete.delete();
+                }
+            }
+        }
+    }
+
+    public static void createNewBranch(String newBranchName) {
+        if (plainFilenamesIn(BRANCH_DIR).contains(newBranchName)) {
+            message("A branch with that name already exists.");
+            System.exit(0);
+        }
+        Commit currentCommit = getCurrentCommit();
+        Branch newBranch = new Branch(newBranchName, currentCommit);
+        newBranch.save();
     }
 }

@@ -49,6 +49,23 @@ public class Main {
             case "status":
                 Repository.status();
                 break;
+            case "checkout":
+                if (args.length == 3) {
+                    String fileName = args[2];
+                    Repository.checkoutFile(null, fileName);
+                } else if (args.length == 4) {
+                    String commitId = args[1];
+                    String fileName = args[3];
+                    Repository.checkoutFile(commitId, fileName);
+                } else if (args.length == 2) {
+                    String branch = args[1];
+                    Repository.checkoutBranch(branch);
+                }
+                break;
+            case "branch":
+                String newBranchName = args[1];
+                Repository.createNewBranch(newBranchName);
+                break;
             default:
                 Utils.message("No command with that name exists.");
                 System.exit(0);
