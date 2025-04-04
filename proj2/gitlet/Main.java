@@ -66,6 +66,14 @@ public class Main {
                 String newBranchName = args[1];
                 Repository.createNewBranch(newBranchName);
                 break;
+            case "rm-branch":
+                String targetBranch = args[1];
+                Repository.removeBranch(targetBranch);
+                break;
+            case "reset":
+                String commitId = args[1];
+                Repository.reset(commitId);
+                break;
             default:
                 Utils.message("No command with that name exists.");
                 System.exit(0);

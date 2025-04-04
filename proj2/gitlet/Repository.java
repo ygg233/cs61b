@@ -81,10 +81,6 @@ public class Repository implements Serializable {
         }
     }
 
-    public static void saveStagingArea(StagingArea stagingArea) {
-        writeObject(STAGING, stagingArea);
-    }
-
     public static Branch getCurrentBranch() {
         String currentBranchName = readContentsAsString(HEAD);
         return readBranch(currentBranchName);
@@ -132,7 +128,7 @@ public class Repository implements Serializable {
             blob.save();
         }
 
-        saveStagingArea(stagingArea);
+        stagingArea.save();
     }
 
     public static void commit(String commitMessage) {
@@ -161,7 +157,7 @@ public class Repository implements Serializable {
 
         // clear the staging area
         stagingArea.clear();
-        saveStagingArea(stagingArea);
+        stagingArea.save();
     }
 
     public static void remove(String fileName) {
@@ -191,7 +187,7 @@ public class Repository implements Serializable {
             fileToRemove.delete();
         }
 
-        saveStagingArea(stagingArea);
+        stagingArea.save();
     }
 
     public static void log() {
@@ -355,7 +351,7 @@ public class Repository implements Serializable {
 
         stagingAddedFiles.remove(fileName);
         stagingRemovedFiles.remove(fileName);
-        saveStagingArea(stagingArea);
+        stagingArea.save();
 
         restoreFile(fileName, targetCommit.getFilesRef().get(fileName));
     }
@@ -402,7 +398,7 @@ public class Repository implements Serializable {
         // clear staging area
         StagingArea stagingArea = getStagingArea();
         stagingArea.clear();
-        saveStagingArea(stagingArea);
+        stagingArea.save();
 
         overwriteWorkingDirectory(targetCommit);
         deleteUntrackedInTarget(targetCommit);
@@ -466,5 +462,43 @@ public class Repository implements Serializable {
         Commit currentCommit = getCurrentCommit();
         Branch newBranch = new Branch(newBranchName, currentCommit);
         newBranch.save();
+    }
+
+    public static void removeBranch(String targetBranch) {
+        if (!plainFilenamesIn(BRANCH_DIR).contains(targetBranch)) {
+            message("A branch with that name does not exist.");
+            System.exit(0);
+        }
+
+        Branch currentBranch = getCurrentBranch();
+        if (currentBranch.getBranchName().equals(targetBranch)) {
+            message("Cannot remove the current branch.");
+            System.exit(0);
+        }
+
+        File branchFile = join(BRANCH_DIR, targetBranch);
+        branchFile.delete();
+    }
+
+    public static void reset(String commitIdPrefix) {
+        String commitId = findFullCommitIdByPrefix(commitIdPrefix);
+        if (commitId == null) {
+            Utils.message("No commit with that id exists.");
+            System.exit(0);
+        }
+
+        Commit targetCommit = readCommit(commitId);
+
+        checkUntrackedFilesOverwrite(targetCommit);
+
+        StagingArea stagingArea = getStagingArea();
+        stagingArea.clear();
+        stagingArea.save();
+
+        overwriteWorkingDirectory(targetCommit);
+
+        Branch currentBranch = getCurrentBranch();
+        currentBranch.updateCommit(targetCommit);
+        currentBranch.save();
     }
 }

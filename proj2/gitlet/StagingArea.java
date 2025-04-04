@@ -18,6 +18,9 @@ public class StagingArea implements Serializable {
         return removedFiles;
     }
 
+    public void save() {
+        Utils.writeObject(Repository.STAGING, this);
+    }
     public void clear() {
         addedFiles.clear();
         removedFiles.clear();
