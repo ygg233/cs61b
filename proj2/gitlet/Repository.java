@@ -399,9 +399,6 @@ public class Repository implements Serializable {
 
         checkUntrackedFilesOverwrite(targetCommit);
 
-        // update HEAD
-        writeContents(HEAD, targetBranchName);
-
         // clear staging area
         StagingArea stagingArea = getStagingArea();
         stagingArea.clear();
@@ -409,6 +406,11 @@ public class Repository implements Serializable {
 
         overwriteWorkingDirectory(targetCommit);
         deleteUntrackedInTarget(targetCommit);
+
+        // update HEAD
+        // previously update HEAD deletingUntrackedInTarget, which will modify the current commit
+        // then cause the deleteUntrackedInTarget does not work
+        writeContents(HEAD, targetBranchName);
     }
 
     public static void checkUntrackedFilesOverwrite(Commit targetCommit) {
