@@ -44,7 +44,8 @@ public class Repository implements Serializable {
 
     public static void init() {
         if (GITLET_DIR.exists()) {
-            System.out.println("A Gitlet version-control system already exists in the current directory.");
+            System.out.println("A Gitlet version-control system " +
+                    "already exists in the current directory.");
             System.exit(0);
         }
 
@@ -129,7 +130,8 @@ public class Repository implements Serializable {
 
         StagingArea stagingArea = getStagingArea();
 
-        if (stagingArea.getRemovedFiles().isEmpty() && stagingArea.getAddedFiles().isEmpty()) {
+        if (stagingArea.getRemovedFiles().isEmpty()
+                && stagingArea.getAddedFiles().isEmpty()) {
             Utils.message("No changes added to the commit.");
             System.exit(0);
         }
@@ -267,14 +269,13 @@ public class Repository implements Serializable {
         Commit currentCommit = getCurrentCommit();
         Set<String> modifiedNotStaged = new TreeSet<>();
         Map<String, String> trackedFiles = currentCommit.getFilesRef();
-
-        // tracked files are modified or deleted and have not been staged yet
         for (String trackedFile: trackedFiles.keySet()) {
             File workingDirectorFile = join(CWD, trackedFile);
             if (workingDirectorFile.exists()) {
                 String workingBlobId = sha1(readContents(workingDirectorFile));
                 String trackedBlobId = trackedFiles.get(trackedFile);
-                if (!workingBlobId.equals(trackedBlobId) && !stagedAddedFiles.containsKey(trackedFile)) {
+                if (!workingBlobId.equals(trackedBlobId)
+                        && !stagedAddedFiles.containsKey(trackedFile)) {
                     modifiedNotStaged.add(trackedFile + " (modified)");
                 }
             } else {
@@ -297,7 +298,6 @@ public class Repository implements Serializable {
                 modifiedNotStaged.add(stagedAddedFile + " (deleted)");
             }
         }
-
         modifiedNotStaged.forEach(System.out::println);
         System.out.println();
 
@@ -306,9 +306,7 @@ public class Repository implements Serializable {
         Set<String> untracked = new TreeSet<>();
         for (String workingFile: workingFiles) {
             File file = join(CWD, workingFile);
-            if (file.isDirectory()) {
-                continue;
-            }
+            if (file.isDirectory()) continue;
             if (!trackedFiles.containsKey(workingFile)
                     && !stagedAddedFiles.containsKey(workingFile)
                     && !stagedRemovedFiles.contains(workingFile)) {
@@ -416,7 +414,8 @@ public class Repository implements Serializable {
             boolean isTrackedInTargetCommit = targetTracked.containsKey(file);
 
             if (isTrackedInTargetCommit && !isStaged && !isTrackedInCurrentCommit) {
-                message("There is an untracked file in the way; delete it, or add and commit it first.");
+                message("There is an untracked file in the way; " +
+                        "delete it, or add and commit it first.");
                 System.exit(0);
             }
         }
@@ -488,9 +487,13 @@ public class Repository implements Serializable {
         stagingArea.save();
 
         overwriteWorkingDirectory(targetCommit);
+        deleteUntrackedInTarget(targetCommit);
 
         Branch currentBranch = getCurrentBranch();
         currentBranch.updateCommit(targetCommit);
         currentBranch.save();
+
+        // Wrong order here! The getCurrentCommit() depends on the current branch!
+        // deleteUntrackedInTarget(targetCommit);
     }
 }
