@@ -248,4 +248,40 @@ class Utils {
         dateFormat.setTimeZone(TimeZone.getDefault());
         return dateFormat.format(date);
     }
+
+    static void validateArgsLength(String[] args, int len) {
+        if (args.length != len) {
+            message("Incorrect operands.");
+            System.exit(0);
+        }
+    }
+
+    static void validateCheckoutArgs(String[] args) {
+        switch (args.length) {
+            case 2:
+                String branch = args[1];
+                Repository.checkoutBranch(branch);
+                break;
+            case 3:
+                if (!args[1].equals("--")) {
+                    message("Incorrect operands.");
+                    System.exit(0);
+                }
+                String fileName = args[2];
+                Repository.checkoutFile(null, fileName);
+                break;
+            case 4:
+                if (!args[2].equals("--")) {
+                    message("Incorrect operands.");
+                    System.exit(0);
+                }
+                Repository.checkoutFile(args[1], args[3]);
+                break;
+            default:
+                message("Incorrect operands.");
+                System.exit(0);
+                break;
+        }
+
+    }
 }

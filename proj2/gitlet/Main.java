@@ -20,57 +20,56 @@ public class Main {
         String firstArg = args[0];
         switch(firstArg) {
             case "init":
-                // TODO: handle the `init` command
+                Utils.validateArgsLength(args, 1);
                 Repository.init();
                 break;
             case "add":
+                Utils.validateArgsLength(args, 2);
                 String fileToAdd = args[1];
                 Repository.add(fileToAdd);
                 break;
-            // TODO: FILL THE REST IN
             case "commit":
+                Utils.validateArgsLength(args, 2);
                 String commitMessage = args[1];
                 Repository.commit(commitMessage);
                 break;
             case "rm":
+                Utils.validateArgsLength(args, 2);
                 String fileToRemove = args[1];
                 Repository.remove(fileToRemove);
                 break;
             case "log":
+                Utils.validateArgsLength(args, 1);
                 Repository.log();
                 break;
             case "global-log":
+                Utils.validateArgsLength(args, 1);
                 Repository.globalLog();
                 break;
             case "find":
+                Utils.validateArgsLength(args, 2);
                 String msgToFind = args[1];
                 Repository.find(msgToFind);
                 break;
             case "status":
+                Utils.validateArgsLength(args, 1);
                 Repository.status();
                 break;
             case "checkout":
-                if (args.length == 3) {
-                    String fileName = args[2];
-                    Repository.checkoutFile(null, fileName);
-                } else if (args.length == 4) {
-                    String commitId = args[1];
-                    String fileName = args[3];
-                    Repository.checkoutFile(commitId, fileName);
-                } else if (args.length == 2) {
-                    String branch = args[1];
-                    Repository.checkoutBranch(branch);
-                }
+                Utils.validateCheckoutArgs(args);
                 break;
             case "branch":
+                Utils.validateArgsLength(args, 2);
                 String newBranchName = args[1];
                 Repository.createNewBranch(newBranchName);
                 break;
             case "rm-branch":
+                Utils.validateArgsLength(args, 2);
                 String targetBranch = args[1];
                 Repository.removeBranch(targetBranch);
                 break;
             case "reset":
+                Utils.validateArgsLength(args, 2);
                 String commitId = args[1];
                 Repository.reset(commitId);
                 break;
@@ -78,6 +77,5 @@ public class Main {
                 Utils.message("No command with that name exists.");
                 System.exit(0);
         }
-
     }
 }
