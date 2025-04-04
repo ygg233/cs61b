@@ -242,7 +242,9 @@ class Utils {
      * @return
      */
     static String convertDateInFormat(Date date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM d HH:mm:ss yyyy Z", Locale.ENGLISH);
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                "EEE MMM d HH:mm:ss yyyy Z", Locale.ENGLISH
+        );
         dateFormat.setTimeZone(TimeZone.getDefault());
         return dateFormat.format(date);
     }

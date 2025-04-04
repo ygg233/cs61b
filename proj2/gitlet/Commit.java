@@ -1,24 +1,19 @@
 package gitlet;
 
-// TODO: any imports you need here
-
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Date; // TODO: You'll likely use this in this class
+import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /** Represents a gitlet commit object.
- *  TODO: It's a good idea to give a description here of what else this Class
  *  does at a high level.
  *
- *  @author TODO
+ *  @author Yang
  */
 public class Commit implements Serializable {
     /**
-     * TODO: add instance variables here.
      *
      * List all instance variables of the Commit class here with a useful
      * comment above them describing what that variable represents and how that
@@ -31,10 +26,7 @@ public class Commit implements Serializable {
     /** The timestamp of this Commit. */
     private Date timestamp;
 
-    /** The mapping of file name to blob reference
-     * NOTICE: At beginning, I thought it can be added with multiple files but not! Read spec carefully!.
-     * NOTICE2: OH NO! Surely that only one file can be 'add' one time, but not commit!
-     * */
+    /** The mapping of file name to blob reference */
     private Map<String, String> filesRef = new HashMap<>();
 
     /** The reference to the default parent commit. */
@@ -45,8 +37,6 @@ public class Commit implements Serializable {
 
     /** The unique reference to the object, which is computed by the SHA-1 algorithm. */
     private String sha1Ref;
-
-    /* TODO: fill in the rest of this class. */
 
     public Commit() {
         this.message = "initial commit";

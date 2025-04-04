@@ -1,24 +1,18 @@
 package gitlet;
 
-import jdk.jshell.execution.Util;
-
 import java.io.File;
 import java.io.Serializable;
 import java.util.*;
 
 import static gitlet.Utils.*;
 
-// TODO: any imports you need here
-
 /** Represents a gitlet repository.
- *  TODO: It's a good idea to give a description here of what else this Class
  *  does at a high level.
  *
- *  @author TODO
+ *  @author Yang
  */
 public class Repository implements Serializable {
     /**
-     * TODO: add instance variables here.
      *
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
@@ -47,10 +41,6 @@ public class Repository implements Serializable {
 
     /** The HEAD pointer that points to the current working commit. */
     public static final File HEAD = join(GITLET_DIR, "HEAD");
-
-    private static Map<String, String> blobs;
-
-    /* TODO: fill in the rest of this class. */
 
     public static void init() {
         if (GITLET_DIR.exists()) {
@@ -113,14 +103,14 @@ public class Repository implements Serializable {
         Blob blob = new Blob(fileToAdd);
         String blobSha1Ref = blob.getSha1Ref();
 
-        if (trackedFiles != null &&
-                trackedFiles.containsKey(fileName) &&
-                trackedFiles.get(fileName).equals(blobSha1Ref)) {
+        if (trackedFiles != null
+                && trackedFiles.containsKey(fileName)
+                && trackedFiles.get(fileName).equals(blobSha1Ref)) {
             if (addedStagingFiles.containsKey(fileName)) {
                 addedStagingFiles.remove(fileName);
             }
 
-            if (removedStagingFiles.contains(fileName)){
+            if (removedStagingFiles.contains(fileName)) {
                 removedStagingFiles.remove(fileName);
             }
         } else {
@@ -319,7 +309,9 @@ public class Repository implements Serializable {
             if (file.isDirectory()) {
                 continue;
             }
-            if (!trackedFiles.containsKey(workingFile) && !stagedAddedFiles.containsKey(workingFile) && !stagedRemovedFiles.contains(workingFile)) {
+            if (!trackedFiles.containsKey(workingFile)
+                    && !stagedAddedFiles.containsKey(workingFile)
+                    && !stagedRemovedFiles.contains(workingFile)) {
                 untracked.add(workingFile);
             }
         }
