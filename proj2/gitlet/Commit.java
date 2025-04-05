@@ -30,10 +30,10 @@ public class Commit implements Serializable {
     private Map<String, String> filesRef = new HashMap<>();
 
     /** The reference to the default parent commit. */
-    private String defaultParentCommit;
+    private Commit defaultParentCommit;
 
     /** The reference for the possible (for merges) second parent commit. */
-    private String secondParentCommit;
+    private Commit secondParentCommit;
 
     /** The unique reference to the object, which is computed by the SHA-1 algorithm. */
     private String sha1Ref;
@@ -47,7 +47,7 @@ public class Commit implements Serializable {
     public Commit(String message, Commit parent, StagingArea stagingArea) {
         this.message = message;
         this.timestamp = new Date();
-        this.defaultParentCommit = parent.getSha1Ref();
+        this.defaultParentCommit = parent;
 
         this.filesRef.putAll(parent.getFilesRef());
 
@@ -61,7 +61,7 @@ public class Commit implements Serializable {
                 this.message,
                 this.timestamp.toString(),
                 this.filesRef.toString(),
-                this.defaultParentCommit
+                this.defaultParentCommit.toString()
         );
     }
 
@@ -73,7 +73,7 @@ public class Commit implements Serializable {
         return sha1Ref;
     }
 
-    public String getDefaultParentCommit() {
+    public Commit getDefaultParentCommit() {
         return defaultParentCommit;
     }
 

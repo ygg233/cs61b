@@ -1,7 +1,10 @@
 package gitlet;
 
+import edu.princeton.cs.algs4.Merge;
+
 import java.io.File;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static gitlet.Utils.*;
@@ -187,7 +190,8 @@ public class Repository implements Serializable {
 
         while (currentCommit != null) {
             printCommitInfo(currentCommit);
-            String parentId = currentCommit.getDefaultParentCommit();
+            Commit parentCommit = currentCommit.getDefaultParentCommit();
+            String parentId = parentCommit == null ? null : parentCommit.getSha1Ref();
             currentCommit = parentId == null ? null : readCommit(parentId);
         }
     }
@@ -302,17 +306,7 @@ public class Repository implements Serializable {
         System.out.println();
 
         System.out.println("=== Untracked Files ===");
-        List<String> workingFiles = plainFilenamesIn(CWD);
-        Set<String> untracked = new TreeSet<>();
-        for (String workingFile: workingFiles) {
-            File file = join(CWD, workingFile);
-            if (file.isDirectory()) continue;
-            if (!trackedFiles.containsKey(workingFile)
-                    && !stagedAddedFiles.containsKey(workingFile)
-                    && !stagedRemovedFiles.contains(workingFile)) {
-                untracked.add(workingFile);
-            }
-        }
+        Set<String> untracked = getUntrackedFiles(currentCommit, stagingArea);
         untracked.forEach(System.out::println);
         System.out.println();
     }
@@ -495,5 +489,262 @@ public class Repository implements Serializable {
 
         // Wrong order here! The getCurrentCommit() depends on the current branch!
         // deleteUntrackedInTarget(targetCommit);
+    }
+
+    public static void merge(String branchNameToBeMerged) {
+        StagingArea stagingArea = getStagingArea();
+        if (!stagingArea.getAddedFiles().isEmpty()
+                || !stagingArea.getRemovedFiles().isEmpty()) {
+            message("You have uncommitted changes.");
+            System.exit(0);
+        }
+
+        if (!plainFilenamesIn(BRANCH_DIR).contains(branchNameToBeMerged)) {
+            message("A branch with that name does not exist.");
+            System.exit(0);
+        }
+
+        Branch currentBranch = getCurrentBranch();
+        String currentBranchName = currentBranch.getBranchName();
+        if (currentBranchName.equals(branchNameToBeMerged)) {
+            message("Cannot merge a branch with itself.");
+            System.exit(0);
+        }
+
+        Commit currentCommit = getCurrentCommit();
+        Commit mergedHeadCommit = readBranch(branchNameToBeMerged).getCommit();
+        Commit splitPoint = findSplitPoint(currentCommit, mergedHeadCommit);
+
+        if (splitPoint.equals(mergedHeadCommit)) {
+            Utils.message("Given branch is an ancestor of the current branch.");
+            return;
+        }
+
+        if (splitPoint.equals(currentCommit)) {
+            currentBranch.updateCommit(mergedHeadCommit);
+            message("Current branch fast-forwarded.");
+            return;
+        }
+
+        checkMergeSafety(mergedHeadCommit, currentCommit, stagingArea);
+        MergeResult mergeResult = processMerge(currentCommit, mergedHeadCommit, splitPoint);
+        applyMergeResult(mergeResult, currentBranchName, branchNameToBeMerged);
+    }
+
+    private static MergeResult processMerge(Commit currentCommit, Commit targetMergedBranchHead, Commit splitPoint) {
+        MergeResult result = new MergeResult();
+        Set<String> allFiles = new HashSet<>();
+        Map<String, String> currentCommitTracked = currentCommit.getFilesRef();
+        Map<String, String> targetCommitTracked = targetMergedBranchHead.getFilesRef();
+        Map<String, String> splitPointTracked = splitPoint.getFilesRef();
+
+        allFiles.addAll(currentCommitTracked.keySet());
+        allFiles.addAll(targetCommitTracked.keySet());
+        allFiles.addAll(splitPointTracked.keySet());
+
+
+        for (String file: allFiles) {
+            String splitPointBlobId = splitPointTracked.get(file);
+            String currentCommitBlobId = currentCommitTracked.get(file);
+            String targetCommitBlobId = targetCommitTracked.get(file);
+
+            if (isSameBlob(splitPointBlobId, currentCommitBlobId)
+                    && !isSameBlob(splitPointBlobId, targetCommitBlobId)) {
+                result.addMergedFile(file, targetCommitBlobId);
+            } else if (isSameBlob(splitPointBlobId, targetCommitBlobId)
+                    && !isSameBlob(splitPointBlobId, currentCommitBlobId)) {
+                result.addMergedFile(file, currentCommitBlobId);
+            } else if (!isSameBlob(splitPointBlobId, currentCommitBlobId)
+                    && !isSameBlob(splitPointBlobId, targetCommitBlobId)
+                    && isSameBlob(targetCommitBlobId, currentCommitBlobId)) {
+
+            } else if (splitPointBlobId == null && currentCommitBlobId != null && targetCommitBlobId == null) {
+                result.addMergedFile(file, currentCommitBlobId);
+            }
+            else if (splitPointBlobId == null && currentCommitBlobId == null && targetCommitBlobId != null) {
+                result.addMergedFile(file, targetCommitBlobId);
+            }
+            else if (splitPointBlobId != null &&
+                    isSameBlob(splitPointBlobId, currentCommitBlobId) &&
+                    targetCommitBlobId == null) {
+                result.removeFiles(file);
+            }
+            else if (splitPointBlobId != null &&
+                    currentCommitBlobId == null &&
+                    isSameBlob(splitPointBlobId, targetCommitBlobId)) {
+                // Do nothing (remain absent)
+            }
+            else {
+                handleConflict(file, currentCommitBlobId, targetCommitBlobId, result);
+            }
+        }
+
+        return result;
+    }
+
+    public static void applyMergeResult(MergeResult result, String currentBranchName, String givenBranchName) {
+        StagingArea staging = getStagingArea();
+        staging.clear();
+        staging.save();
+
+        for (Map.Entry<String, String> entry : result.getMergedFiles().entrySet()) {
+            String fileName = entry.getKey();
+            String blobId = entry.getValue();
+
+            File file = join(CWD, fileName);
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+
+            byte[] content = getBlobContentBytes(blobId);
+            Utils.writeContents(file, content);
+
+            staging.getAddedFiles().put(fileName, blobId);
+        }
+
+        for (String fileName: result.getRemovedFiles()) {
+            File file = join(CWD, fileName);
+            if (file.exists()) {
+                if (!file.delete()) {
+                    throw new IllegalArgumentException("Failed to delete file: " + fileName);
+                }
+            }
+            staging.getRemovedFiles().add(fileName);
+        }
+        staging.save();
+
+        // 4. 处理冲突提示
+        if (result.hasConflict()) {
+            System.out.println("Encountered a merge conflict.");
+            System.out.println("The following files contain conflicts:");
+            result.getConflictFiles().forEach(System.out::println);
+        }
+
+        // 5. 创建合并提交
+        Commit currentCommit = getCurrentCommit();
+
+        Commit mergeCommit = new Commit(
+                "Merged " + givenBranchName + " into " + currentBranchName,
+                currentCommit,
+                staging
+        );
+        mergeCommit.getFilesRef().putAll(result.getMergedFiles());
+        mergeCommit.save();
+
+        Branch currentBranch = readBranch(currentBranchName);
+        currentBranch.updateCommit(mergeCommit);
+        currentBranch.save();
+    }
+
+    private static byte[] getBlobContentBytes(String blobId) {
+        if (blobId == null) return new byte[0];
+        File blobFile = join(BLOB_DIR, blobId);
+        return Utils.readContents(blobFile);
+    }
+
+    private static void handleConflict(String file, String currentBlobId, String givenBlobId, MergeResult result) {
+        String currentContent = getBlobContent(currentBlobId);
+        String givenContent = getBlobContent(givenBlobId);
+
+        String conflictContent = "<<<<<<< HEAD\n" +
+                currentContent +
+                "=======\n" +
+                givenContent +
+                ">>>>>>>\n";
+
+        String newBlobId = createBlob(conflictContent);
+
+        result.addMergedFile(file, newBlobId);
+        result.markConflict(file);
+    }
+
+    private static String getBlobContent(String blobId) {
+        if (blobId == null) return "";
+        File blobFile = join(BLOB_DIR, blobId);
+        if (!blobFile.exists()) {
+            throw new IllegalArgumentException("Blob not found: " + blobId);
+        }
+        return Utils.readContentsAsString(blobFile);
+    }
+
+    private static String createBlob(String content) {
+        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+        String blobId = Utils.sha1(bytes);
+        File blobFile = join(BLOB_DIR, blobId);
+        if (!blobFile.exists()) {
+            Utils.writeContents(blobFile, bytes);
+        }
+        return blobId;
+    }
+
+    private static boolean isSameBlob(String blob1, String blob2) {
+        return Objects.equals(blob1, blob2);
+    }
+
+    private static Commit findSplitPoint(Commit commit1, Commit commit2) {
+        Set<String> commits = new HashSet<>();
+
+        Commit ptr = commit1;
+        while (ptr != null) {
+            commits.add(ptr.getSha1Ref());
+            ptr = ptr.getDefaultParentCommit();
+        }
+
+        ptr = commit2;
+        while (ptr != null) {
+            if (commits.contains(ptr.getSha1Ref())) {
+                return ptr;
+            }
+            ptr = ptr.getDefaultParentCommit();
+        }
+
+        throw new IllegalStateException("No common ancestor found");
+    }
+
+    /**
+     * Check if there is any untracked file in the CURRENT commit would be overwritten
+     * or deleted by the merge
+     * @param commitToBeMerged
+     * @param currentCommit
+     * @param stagingArea
+     */
+    private static void checkMergeSafety(Commit commitToBeMerged, Commit currentCommit, StagingArea stagingArea) {
+        Set<String> untrackedFiles = getUntrackedFiles(currentCommit, stagingArea);
+        Map<String, String> trackedByCommitToBeMerged = commitToBeMerged.getFilesRef();
+
+        for (String untrackedFile: untrackedFiles) {
+            System.out.println(untrackedFile + " " + trackedByCommitToBeMerged.containsKey(untrackedFile));
+            if (trackedByCommitToBeMerged.containsKey(untrackedFile)) {
+                String untrackedBlobId = sha1(readContents(join(CWD, untrackedFile)));
+                String trackedFileByCommitToBeMerged = trackedByCommitToBeMerged.get(untrackedFile);
+                if (!untrackedBlobId.equals(trackedFileByCommitToBeMerged)) {
+                    message("There is an untracked file in the way; delete it, or add and commit it first.");
+                    System.exit(0);
+                }
+            } else {
+                message("There is an untracked file in the way; delete it, or add and commit it first.");
+                System.exit(0);
+            }
+        }
+    }
+
+    private static Set<String> getUntrackedFiles(Commit currentCommit, StagingArea stagingArea) {
+        Map<String, String> trackedFiles = currentCommit.getFilesRef();
+        Map<String, String> stagedAddedFiles = stagingArea.getAddedFiles();
+        Set<String> stagedRemovedFiles = stagingArea.getRemovedFiles();
+
+        List<String> workingFiles = plainFilenamesIn(CWD);
+        Set<String> untracked = new TreeSet<>();
+        for (String workingFile: workingFiles) {
+            File file = join(CWD, workingFile);
+            if (file.isDirectory()) continue;
+            if (!trackedFiles.containsKey(workingFile)
+                    && !stagedAddedFiles.containsKey(workingFile)
+                    && !stagedRemovedFiles.contains(workingFile)) {
+                untracked.add(workingFile);
+            }
+        }
+        return untracked;
     }
 }

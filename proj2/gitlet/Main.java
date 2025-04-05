@@ -11,7 +11,6 @@ public class Main {
      *  <COMMAND> <OPERAND1> <OPERAND2> ... 
      */
     public static void main(String[] args) {
-        // TODO: what if args is empty?
         if (args.length == 0) {
             Utils.message("Please enter a command.");
             System.exit(0);
@@ -72,6 +71,11 @@ public class Main {
                 Utils.validateArgsLength(args, 2);
                 String commitId = args[1];
                 Repository.reset(commitId);
+                break;
+            case "merge":
+                Utils.validateArgsLength(args, 2);
+                String branchToBeMerged = args[1];
+                Repository.merge(branchToBeMerged);
                 break;
             default:
                 Utils.message("No command with that name exists.");
