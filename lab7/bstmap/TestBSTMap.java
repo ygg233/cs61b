@@ -1,7 +1,14 @@
 package bstmap;
 
 import static org.junit.Assert.*;
+
+import edu.princeton.cs.algs4.BST;
 import org.junit.Test;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Tests by Brendan Hu, Spring 2015, revised for 2016 by Josh Hug */
 public class TestBSTMap {
@@ -87,4 +94,42 @@ public class TestBSTMap {
         assertTrue(b.containsKey("hi"));
     }
 
+    @Test
+    public void printInOrderTest() {
+        BSTMap<String, Integer> b = new BSTMap<String, Integer>();
+        b.put("a", 1);
+        b.put("k", 2);
+        b.put("c", 3);
+        b.put("b", 4);
+        b.put("f", 5);
+
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(bos));
+
+        b.printInOrder();
+
+        System.setOut(originalOut);
+
+        String output = bos.toString();
+        List<String> outputLines = new ArrayList<>();
+        for (String line : output.split("\\R")) {
+            if (!line.isEmpty()) {
+                outputLines.add(line);
+            }
+        }
+
+        String[] expected = {
+                "Key: a Value: 1",
+                "Key: b Value: 4",
+                "Key: c Value: 3",
+                "Key: f Value: 5",
+                "Key: k Value: 2"
+        };
+
+        assertEquals(expected.length, outputLines.size());
+        for (int i = 0; i < expected.length; i++) {
+            assertEquals(expected[i], outputLines.get(i));
+        }
+    }
 }
